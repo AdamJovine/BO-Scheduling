@@ -2,10 +2,8 @@ version: 1.0
 runtime: python311 # Specifies the Python 3.11 runtime environment.
 build:
   # Commands to execute during the build phase.
-  # Using a block scalar style for commands to ensure correct parsing.
-  commands: |
-    python3.11 -m pip install --upgrade pip
-    python3.11 -m pip install -r requirements.txt
+  # Combining commands into a single string using '&&' for robust parsing.
+  commands: python3.11 -m pip install --upgrade pip && python3.11 -m pip install -r requirements.txt
 run:
   # The command to start your application server.
   # Gunicorn is used here as a production-ready WSGI server for Flask applications.
