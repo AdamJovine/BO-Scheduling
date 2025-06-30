@@ -1,5 +1,5 @@
-version: 1.0
-runtime: python311 # Specifies the Python 3.11 runtime environment.
+version: 1.0 # Specifies the Python 3.11 runtime environment.
+runtime: python311
 build:
   # Commands to execute during the build phase.
   commands:
@@ -11,9 +11,10 @@ build:
 run:
   # The command to start your application server.
   # Gunicorn is used here as a production-ready WSGI server for Flask applications.
-  # 'app:app' refers to the 'app.py' file (which is your run.py content)
-  # and the 'app' Flask instance within that file.
-  command: gunicorn --bind :8080 app:app
+  # We explicitly set PYTHONPATH to '.' (the current directory, which is /app/backend)
+  # to ensure Python can find installed packages relative to the application code.
+  # IMPORTANT CHANGE: Using 'python3.11 -m gunicorn' to ensure the correct Gunicorn executable is found.
+  command: PYTHONPATH=. python3.11 -m gunicorn --bind :8080 app:app
   # Network configuration for your application.
   network:
     # App Runner typically exposes applications on port 8080.
