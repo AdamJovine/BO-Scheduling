@@ -4,9 +4,19 @@ build:
   commands:
     pre-build:
       - pip3 install --no-cache-dir -r requirements.txt
+      - pip3 install psycopg2-binary
     build:
       - echo "Creating required directories"
       - mkdir -p data logs
+      - echo "Running database migrations"
+      - python3 -c "
+        from flask_migrate import upgrade;
+        from app import create_app;
+        app = create_app();
+        with app.app_context():
+            upgrade();
+        print('Database migrations completed')
+        "
 run:
   runtime-version: 3.11
   command: python3 run.py
@@ -16,8 +26,19 @@ run:
   env:
     - name: PORT
       value: "5000"
+    - name: RDS_HOSTNAME
+      value: "bo-scheduling.cluster-cx06e4a0kux3.us-east-2.rds.amazonaws.com"
+    - name: RDS_USERNAME
+      value: "postgres"
+    - name: RDS_PASSWORD
+      value: "YOUR_ACTUAL_PASSWORD"
+    - name: RDS_PORT
+      value: "5432"
+    - name: RDS_DB_NAME
+      value: "postgres"
+    - name: FLASK_ENV
+      value: "production"
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"
     - name: PYTHONUNBUFFERED
       value: "1"
-
