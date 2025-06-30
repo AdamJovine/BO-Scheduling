@@ -1,15 +1,17 @@
 version: 1.0
 runtime: python311
+
 build:
   commands:
     pre-build:
       - pip3 install --no-cache-dir -r requirements.txt
-      - pip3 install psycopg2-binary
     build:
       - echo "Creating required directories"
       - mkdir -p data logs
-      - echo "Running database migrations"
-      - python3 migrate.py
+      - echo "Downloading database from S3"
+      - aws s3 cp s3://boscheduling-data-aj-2025/schedules.sql data/schedules.sql
+      - echo "Setting up database"
+      - python3 import_data.py
 run:
   runtime-version: 3.11
   command: python3 run.py
@@ -35,3 +37,4 @@ run:
       value: "1"
     - name: PYTHONUNBUFFERED
       value: "1"
+
