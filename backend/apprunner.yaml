@@ -1,16 +1,24 @@
 version: 1.0
-runtime: python311
+runtime: python311 # Specifies the Python 3.11 runtime environment.
 build:
+  # Commands to execute during the build phase.
   commands:
-    build:
-      - pip3 install flask
-
+    # Ensure pip is up-to-date and accessible within the build environment.
+    - python3.11 -m pip install --upgrade pip
+    # Install all dependencies listed in your requirements.txt file.
+    # We use 'python3.11 -m pip' to explicitly call pip associated with the Python 3.11 interpreter.
+    - python3.11 -m pip install -r requirements.txt
 run:
-  runtime-version: 3.11
-  command: python3 simple_run.py
+  # The command to start your application server.
+  # Gunicorn is used here as a production-ready WSGI server for Flask applications.
+  # 'app:app' refers to the 'app.py' file (which is your run.py content)
+  # and the 'app' Flask instance within that file.
+  command: gunicorn --bind :8080 app:app
+  # Network configuration for your application.
   network:
+    # App Runner typically exposes applications on port 8080.
+    # Your run.py uses os.environ.get("PORT", 5000), so if App Runner sets PORT=8080, it will use that.
     port: 8080
-    env: PORT
-  env:
-    - name: PORT
-      value: "8080"
+# Specifies the subdirectory within your Git repository where your application source code resides.
+# App Runner will set its working directory to this path during build and run.
+source_directory: backend
