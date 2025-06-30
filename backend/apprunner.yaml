@@ -4,13 +4,12 @@ build:
   commands:
     build:
       - echo "Building backend..."
-      - cd backend
       - pip3 install --upgrade pip
       - pip3 install --timeout=300 --no-cache-dir -r requirements.txt
 
 run:
   runtime-version: 3.11
-  command: cd backend && python -m gunicorn "run:app" --bind "0.0.0.0:$PORT" --workers 2
+  command: python -m gunicorn "run:app" --bind "0.0.0.0:$PORT" --workers 2
   network:
     port: 5000
     env: PORT
