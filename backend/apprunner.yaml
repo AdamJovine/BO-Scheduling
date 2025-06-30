@@ -7,20 +7,10 @@ build:
       - echo "Installing dependencies..."
       - pip3 install --upgrade pip
       - pip3 install --no-cache-dir -r requirements.txt
-      - echo "Installing AWS CLI..."
-      - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-      - unzip awscliv2.zip
-      - ./aws/install
-      - aws --version
     build:
       - echo "Creating required directories"
       - mkdir -p data logs
-      - echo "Downloading database from S3"
-      - aws s3 cp s3://boscheduling-data-aj-2025/schedules.sql data/schedules.sql --region us-east-2
-      - echo "Verifying download..."
-      - ls -la data/
-      - echo "Setting up database"
-      - python3 import_data.py
+      - echo "Skipping database import - will connect directly to RDS"
       - echo "Build completed successfully"
 
 run:
@@ -48,5 +38,3 @@ run:
       value: "1"
     - name: PYTHONUNBUFFERED
       value: "1"
-    - name: AWS_DEFAULT_REGION
-      value: "us-east-2"
