@@ -1,20 +1,23 @@
-FROM python:3.10-slim
+# Use the same Python version as your local dev
+FROM python:3.11-slim
+
+# Set a working dir
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-RUN apt-get update && apt-get install -y gcc \
-    && rm -rf /var/lib/apt/lists/*
-
+# Copy dependency manifest and install deps
+# (this layers install before copying your code, so rebuilds are faster)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Now your context is /backend, so this copies everything in backend/
+# Copy source
 COPY . .
 
-RUN mkdir -p data logs
+# (Optional) Make healthcheck available
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl --fail http://localhost:8000/health || exit 1
 
-EXPOSE 5000
+# If you use Uvicorn, expose its default port
+EXPOSE 8000
 
-CMD ["python", "run.py"]
+# Default launch command; adjust if you use Flask or Django
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
