@@ -27,7 +27,7 @@ run:
     - name: PORT
       value: "5000"
     - name: RDS_HOSTNAME
-      value: "bo-sched.cluster-cx06e4a0kux3.us-east-2.rds.amazonaws.com"
+      value: "bo-scheduling.cluster-cx06e4a0kux3.us-east-2.rds.amazonaws.com"
     - name: RDS_USERNAME
       value: "postgres"
     - name: RDS_PASSWORD
