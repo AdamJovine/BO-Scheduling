@@ -20,6 +20,12 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    // Optional: also allow it in dev mode
+    allowedHosts: ['byx2rxinsc.us-east-2.awsapprunner.com']
+  },
+  // This is picked up by `vite preview`
+  preview: {
+    allowedHosts: ['byx2rxinsc.us-east-2.awsapprunner.com']
   },
   plugins: [react()],
 })
