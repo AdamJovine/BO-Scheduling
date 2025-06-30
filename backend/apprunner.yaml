@@ -13,7 +13,8 @@ run:
   pre-run:
     - cd backend
     - pip3 install --no-cache-dir -r requirements.txt
-  command: cd backend && gunicorn "run:app" --bind "0.0.0.0:$PORT" --workers 2
+  command: cd backend && python -m gunicorn "run:app" --bind "0.0.0.0:$PORT" --workers 2
+
   network:
     port: 5000
     env: PORT
