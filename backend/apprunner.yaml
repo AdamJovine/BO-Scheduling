@@ -31,7 +31,7 @@ run:
     - name: RDS_USERNAME
       value: "postgres"
     - name: RDS_PASSWORD
-      value: "YOUR_ACTUAL_PASSWORD"
+      value: "IHateLorch123!"
     - name: RDS_PORT
       value: "5432"
     - name: RDS_DB_NAME
