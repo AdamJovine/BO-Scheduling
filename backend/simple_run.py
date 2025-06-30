@@ -6,15 +6,15 @@ app = Flask(__name__)
 
 @app.route("/")
 def hello():
-    return {"message": "Hello from App Runner!", "status": "ok"}
+    return "Hello World from App Runner!"
 
 
 @app.route("/health")
 def health():
-    return {"status": "healthy"}
+    return "OK"
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    print(f"Starting simple Flask app on port {port}")
-    app.run(debug=False, host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 8080))
+    print(f"Starting Flask app on port {port}")
+    app.run(host="0.0.0.0", port=port, debug=False)
