@@ -3,24 +3,24 @@ runtime: python311
 build:
   commands:
     build:
-      - echo "Building backend…"
+      - echo "Current directory: $(pwd)"
+      - echo "Listing contents: $(ls -la)"
+      - echo "Checking if backend directory exists..."
+      - ls -la backend/ || echo "Backend directory not found!"
+      - echo "Building backend..."
       - cd backend
+      - echo "Contents of backend directory: $(ls -la)"
+      - echo "Checking if requirements.txt exists..."
+      - cat requirements.txt | head -5 || echo "requirements.txt not found or empty!"
       - pip3 install --upgrade pip
       - pip3 install --no-cache-dir -r requirements.txt
 
 run:
   runtime-version: 3.11
-  pre-run:
-    - cd backend
-    - pip3 install --no-cache-dir -r requirements.txt
   command: cd backend && python -m gunicorn "run:app" --bind "0.0.0.0:$PORT" --workers 2
-
   network:
     port: 5000
     env: PORT
-  env:
-    - name: PORT
-      value: "5000"
   env:
     - name: PORT
       value: "5000"
