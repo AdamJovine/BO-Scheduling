@@ -2,7 +2,7 @@ version: 1.0
 runtime: python311
 build:
   commands:
-    pre-run:
+    pre-build:
       - pip3 install --no-cache-dir -r requirements.txt
     build:
       - echo "Creating required directories"
@@ -20,3 +20,4 @@ run:
       value: "1"
     - name: PYTHONUNBUFFERED
       value: "1"
+
