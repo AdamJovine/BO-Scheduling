@@ -9,14 +9,7 @@ build:
       - echo "Creating required directories"
       - mkdir -p data logs
       - echo "Running database migrations"
-      - python3 -c "
-        from flask_migrate import upgrade;
-        from app import create_app;
-        app = create_app();
-        with app.app_context():
-            upgrade();
-        print('Database migrations completed')
-        "
+      - python3 migrate.py
 run:
   runtime-version: 3.11
   command: python3 run.py
