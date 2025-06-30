@@ -6,10 +6,15 @@ build:
       - echo "Building backend..."
       - pip3 install --upgrade pip
       - pip3 install --timeout=300 --no-cache-dir -r requirements.txt
+      - echo "Testing basic imports..."
+      - python3 -c "import sys; print('Python version:', sys.version)"
+      - python3 -c "import flask; print('Flask imported successfully')"
+      - python3 -c "print('Testing config import...'); from config import Config; print('Config imported successfully')"
+      - python3 -c "print('Testing app creation...'); from run import app; print('App created successfully:', type(app))"
 
 run:
   runtime-version: 3.11
-  command: python3 -m gunicorn "run:app" --bind "0.0.0.0:$PORT" --workers 2 --log-level debug --access-logfile - --error-logfile -
+  command: python3 -c "print('Starting app test...'); from run import app; print('App object:', app); print('Starting server...'); app.run(host='0.0.0.0', port=int('${PORT}'), debug=False)"
   network:
     port: 5000
     env: PORT
