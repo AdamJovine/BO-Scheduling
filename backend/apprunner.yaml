@@ -3,17 +3,10 @@ runtime: python311
 build:
   commands:
     build:
-      - echo "Current directory: $(pwd)"
-      - echo "Listing contents: $(ls -la)"
-      - echo "Checking if backend directory exists..."
-      - ls -la backend/ || echo "Backend directory not found!"
       - echo "Building backend..."
       - cd backend
-      - echo "Contents of backend directory: $(ls -la)"
-      - echo "Checking if requirements.txt exists..."
-      - cat requirements.txt | head -5 || echo "requirements.txt not found or empty!"
       - pip3 install --upgrade pip
-      - pip3 install --no-cache-dir -r requirements.txt
+      - pip3 install --timeout=300 --no-cache-dir -r requirements.txt
 
 run:
   runtime-version: 3.11
