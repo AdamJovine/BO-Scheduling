@@ -4,21 +4,16 @@ build:
   commands:
     build:
       - echo "Building backend..."
-      - pip3 install --upgrade pip
-      - pip3 install --timeout=300 --no-cache-dir -r requirements.txt
+      - pip3 install flask
 
 run:
   runtime-version: 3.11
-  command: python3 run.py
+  command: python3 simple_run.py
   network:
     port: 5000
     env: PORT
   env:
     - name: PORT
       value: "5000"
-    - name: FLASK_ENV
-      value: "production"
-    - name: PYTHONDONTWRITEBYTECODE
-      value: "1"
     - name: PYTHONUNBUFFERED
       value: "1"
