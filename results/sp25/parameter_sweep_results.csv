@@ -1,0 +1,5 @@
+param_id,error
+size_cutoff300frontloading2k_val20000num_blocks22,Unable to write to file '/home/asj53/BOScheduling/block_assignment/Incumbents/inc_2522561_6.sol'
+size_cutoff300frontloading5k_val20000num_blocks23,Unable to write to file '/home/asj53/BOScheduling/block_assignment/Incumbents/inc_2522564_6.sol'
+size_cutoff300frontloading5k_val20000num_blocks22,Unable to write to file '/home/asj53/BOScheduling/block_assignment/Incumbents/inc_2522566_7.sol'
+size_cutoff300frontloading2k_val20000num_blocks23,Unable to write to file '/home/asj53/BOScheduling/block_assignment/Incumbents/inc_2522565_7.sol'
