@@ -3,17 +3,14 @@ runtime: python311
 build:
   commands:
     build:
-      - echo "Building backend..."
       - pip3 install flask
 
 run:
   runtime-version: 3.11
-  command: python3 simple_run.py
+  command: python3 -c "from flask import Flask; app = Flask(__name__); @app.route('/'); def hello(): return 'Hello World'; app.run(host='0.0.0.0', port=8080)"
   network:
-    port: 5000
+    port: 8080
     env: PORT
   env:
     - name: PORT
-      value: "5000"
-    - name: PYTHONUNBUFFERED
-      value: "1"
+      value: "8080"
