@@ -15,7 +15,7 @@ run:
     env: PORT
   env:
     - name: PORT
-      value: "5000"x
+      value: "5000"
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"
     - name: PYTHONUNBUFFERED
