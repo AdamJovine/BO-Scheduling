@@ -7,6 +7,7 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
+    "18": "^0.0.0",
     "@babel/runtime": "^7.27.6",
     "@headlessui/react": "^2.2.4",
     "axios": "^1.10.0",
