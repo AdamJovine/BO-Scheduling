@@ -10,8 +10,7 @@ build:
     build:
       - echo "Creating required directories"
       - mkdir -p data logs
-      - echo "Skipping database import - will connect directly to RDS"
-      - echo "Build completed successfully"
+      - echo "Build completed successfully - app will connect directly to RDS"
 
 run:
   runtime-version: 3.11
