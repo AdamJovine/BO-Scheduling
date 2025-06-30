@@ -1,23 +1,22 @@
-# Use the same Python version as your local dev
+# Use Python 3.11 to match App Runner runtime
 FROM python:3.11-slim
 
-# Set a working dir
+# Set working directory
 WORKDIR /app
 
-# Copy dependency manifest and install deps
-# (this layers install before copying your code, so rebuilds are faster)
+# Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source
+# Copy all backend source code
 COPY . .
 
-# (Optional) Make healthcheck available
+# Expose the port App Runner expects
+EXPOSE 5000
+
+# Health check for Flask app
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl --fail http://localhost:8000/health || exit 1
+  CMD curl --fail http://localhost:5000/ || exit 1
 
-# If you use Uvicorn, expose its default port
-EXPOSE 8000
-
-# Default launch command; adjust if you use Flask or Django
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use gunicorn for Flask (not uvicorn)
+CMD ["gunicorn", "run:app", "--bind", "0.0.0.0:5000", "--workers", "2"]
