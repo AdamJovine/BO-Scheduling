@@ -7,26 +7,22 @@ export default defineConfig({
     host: 'localhost',
     watch: { usePolling: true, interval: 100 },
     proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
-      '/images': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
-      '/download': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
+      '/api': { target: 'http://localhost:5000', changeOrigin: true },
+      '/images': { target: 'http://localhost:5000', changeOrigin: true },
+      '/download': { target: 'http://localhost:5000', changeOrigin: true },
     },
-    // Optional: also allow it in dev mode
-    allowedHosts: ['byx2rxinsc.us-east-2.awsapprunner.com']
+    // Allow both App Runner URLs in dev
+    allowedHosts: [
+      'byx2rxinsc.us-east-2.awsapprunner.com',
+      '54wxtnsmds.us-east-2.awsapprunner.com'
+    ]
   },
-  // This is picked up by `vite preview`
+  // This one is for `vite preview`
   preview: {
-    allowedHosts: ['byx2rxinsc.us-east-2.awsapprunner.com']
+    allowedHosts: [
+      'byx2rxinsc.us-east-2.awsapprunner.com',
+      '54wxtnsmds.us-east-2.awsapprunner.com'
+    ]
   },
   plugins: [react()],
 })
-
