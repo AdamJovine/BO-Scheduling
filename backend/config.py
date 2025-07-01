@@ -110,10 +110,18 @@ class Config:
             else {}
         ),
     }
+    basedir = os.path.abspath(os.path.dirname(__file__))
 
+    # path to persistent data
+    DATA_DIR = os.environ.get("SAVE_PATH") or os.path.join(basedir, "data")
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    # path to your statically-rendered UI plots
+    UI_PATH = os.environ.get("UI_PATH") or os.path.join(basedir, "UI", "pages", "plots")
+    os.makedirs(UI_PATH, exist_ok=True)
     # Other configuration
     SAVE_PATH = os.environ.get("SAVE_PATH") or os.path.join(basedir, "data")
-    UI_PATH = os.environ.get("UI_PATH") or "/home/asj53/BOScheduling/UI/pages/plots"
+    # UI_PATH = os.environ.get("UI_PATH") or "/home/asj53/BOScheduling/UI/pages/plots"
     NUM_SLOTS = int(os.environ.get("NUM_SLOTS", 24))
     CORS_ORIGINS = ["*"]
 
