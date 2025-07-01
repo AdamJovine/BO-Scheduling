@@ -7,9 +7,9 @@ export default function ScheduleCard({
 }) {
   const title = s.display_name || s.name
 
-  // Try different image base paths
-  const imgBase = '/api/images' // Add /api prefix if your blueprint is registered with it
-  // Alternative: const imgBase = '/images'
+  // src/config.js
+  const API_URL = import.meta.env.VITE_API_URL;
+  const IMG_BASE = `${API_URL}/api/images`;
 
   // Debug logging
   //console.log('Schedule basename:', s.basename)

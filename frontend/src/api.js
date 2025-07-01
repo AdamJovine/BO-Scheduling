@@ -2,15 +2,21 @@
 
 import axios from 'axios'
 
-// use VITE_API_URL || fallback
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5173'
+
+// In prod this is something like "https://your-eb-url"
+// In dev it'll be undefined, so we fall back to empty string → relative URLs
+const BASE = import.meta.env.VITE_API_URL || ''
 
 export const API = axios.create({
-  baseURL: BASE
+  baseURL: BASE,
 })
 
+// (optional) if you ever want the “raw” base for window.open, etc.
+export const API_BASE = BASE
+
 // if your "api" routes are always under "/api", export that too:
-export const API_BASE = `${BASE}/api`
+// src/config.js
+export const API_URL = import.meta.env.VITE_API_URL;
 
 export function fetchSchedules(datePrefix) {
   return API.get(`/api/schedules/${datePrefix}`)
