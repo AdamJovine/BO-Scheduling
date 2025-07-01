@@ -16,8 +16,8 @@ def create_app(config_class=Config):
     def root():
         return {"message": "Hello from App Runner!", "status": "ok"}
 
-    @app.route("/health")
+    @app.route("/api/health")
     def health():
-        return {"status": "healthy"}
+        return {"status": "ok"}, 200
 
     return app
