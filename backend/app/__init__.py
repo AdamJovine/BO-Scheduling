@@ -1,5 +1,5 @@
 from flask import Flask, request
-from config import Config
+from ..config import Config
 import logging
 
 # Set up logging
