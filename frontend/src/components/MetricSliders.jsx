@@ -42,43 +42,6 @@ const sliderConfigAPI = {
 }
 
 const sliderRecordingAPI = {
-  initializeTables: async () => {
-    try {
-      const response = await fetch(`${API_BASE}/init-tables`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      })
-
-      const responseText = await response.text()
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${responseText}`)
-      }
-
-      const result = JSON.parse(responseText)
-      return result
-    } catch (error) {
-      console.error('Error initializing tables:', error)
-      throw error
-    }
-  },
-
-  checkTables: async () => {
-    try {
-      const response = await fetch(`${API_BASE}/debug/check-tables`)
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-
-      const result = await response.json()
-      return result
-    } catch (error) {
-      console.error('Error checking tables:', error)
-      throw error
-    }
-  },
-
   recordInteraction: async (sessionId, sliderKey, value, minValue, maxValue) => {
     const payload = {
       session_id: sessionId,
@@ -89,6 +52,7 @@ const sliderRecordingAPI = {
     }
 
     try {
+      console.log('Recording slider interaction:', payload)
       const response = await fetch(`${API_BASE}/slider-recordings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,6 +66,7 @@ const sliderRecordingAPI = {
       }
 
       const result = JSON.parse(responseText)
+      console.log('Successfully recorded slider interaction:', result)
       return result
     } catch (error) {
       console.error('Error recording interaction:', error)
@@ -116,6 +81,7 @@ const sliderRecordingAPI = {
     }
 
     try {
+      console.log('Recording slider batch:', payload)
       const response = await fetch(`${API_BASE}/slider-recordings/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,6 +95,7 @@ const sliderRecordingAPI = {
       }
 
       const result = JSON.parse(responseText)
+      console.log('Successfully recorded slider batch:', result)
       return result
     } catch (error) {
       console.error('Error recording batch:', error)
@@ -177,7 +144,6 @@ export default function MetricSliders({ data, onChange }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [recordingEnabled, setRecordingEnabled] = useState(true)
-  const [tablesInitialized, setTablesInitialized] = useState(false)
 
   // Compute keys from data when available
   const metricKeys = useMemo(() => {
@@ -226,27 +192,9 @@ export default function MetricSliders({ data, onChange }) {
     }
   }
 
-  // Initialize tables if needed
-  const initializeTablesIfNeeded = async () => {
-    try {
-      const tableStatus = await sliderRecordingAPI.checkTables()
-
-      if (!tableStatus.slider_recordings_exists) {
-        setMessage('Initializing database tables...')
-        await sliderRecordingAPI.initializeTables()
-        setMessage('Database initialized successfully!')
-        setTimeout(() => setMessage(''), 3000)
-      }
-      setTablesInitialized(true)
-    } catch (error) {
-      console.error('Failed to initialize database tables:', error)
-      setMessage('Database initialization failed. Please try again.')
-    }
-  }
-
   // Record slider interaction
   const recordSliderChange = async (key, value) => {
-    if (!recordingEnabled || !tablesInitialized) return
+    if (!recordingEnabled) return
 
     try {
       const bounds = getSliderBounds(key)
@@ -264,7 +212,7 @@ export default function MetricSliders({ data, onChange }) {
 
   // Record all current slider positions
   const recordAllSliders = async () => {
-    if (!recordingEnabled || !tablesInitialized) return
+    if (!recordingEnabled) return
 
     try {
       const recordings = []
@@ -330,7 +278,7 @@ export default function MetricSliders({ data, onChange }) {
     setTimeout(() => setMessage(''), 3000)
 
     // Record the loaded configuration
-    if (recordingEnabled && tablesInitialized) {
+    if (recordingEnabled) {
       setTimeout(() => recordAllSliders(), 100)
     }
   }
@@ -342,18 +290,14 @@ export default function MetricSliders({ data, onChange }) {
     onChange(init)
 
     // Record the reset
-    if (recordingEnabled && tablesInitialized) {
+    if (recordingEnabled) {
       setTimeout(() => recordAllSliders(), 100)
     }
   }
 
   // Initialize on component mount
   useEffect(() => {
-    const initialize = async () => {
-      await initializeTablesIfNeeded()
-      loadSavedConfigs()
-    }
-    initialize()
+    loadSavedConfigs()
   }, [])
 
   // Initialize thresholds when data becomes non-empty
@@ -366,10 +310,10 @@ export default function MetricSliders({ data, onChange }) {
     onChange(init)
 
     // Record initial state
-    if (recordingEnabled && tablesInitialized) {
+    if (recordingEnabled) {
       setTimeout(() => recordAllSliders(), 100)
     }
-  }, [data, onChange, recordingEnabled, tablesInitialized])
+  }, [data, onChange, recordingEnabled])
 
   const renderSlider = key => {
     const bounds = getSliderBounds(key)
@@ -427,20 +371,11 @@ export default function MetricSliders({ data, onChange }) {
           </label>
           <button
             onClick={recordAllSliders}
-            disabled={!recordingEnabled || !tablesInitialized}
-            style={{ fontSize: '0.8rem', opacity: (recordingEnabled && tablesInitialized) ? 1 : 0.5 }}
+            disabled={!recordingEnabled}
+            style={{ fontSize: '0.8rem', opacity: recordingEnabled ? 1 : 0.5 }}
           >
             Record Current State
           </button>
-          <button
-            onClick={initializeTablesIfNeeded}
-            style={{ fontSize: '0.8rem' }}
-          >
-            Initialize DB Tables
-          </button>
-          {tablesInitialized && (
-            <span style={{ color: 'green', fontSize: '0.8rem' }}>✓ DB Ready</span>
-          )}
         </div>
       </div>
 

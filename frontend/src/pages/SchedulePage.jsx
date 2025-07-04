@@ -6,7 +6,9 @@ import ScheduleCard from '../components/ScheduleCard'
 import { usePinnedSchedules } from '../hooks/usePinnedButton'
 
 export default function SchedulePage() {
-  const scheduleId = '20250620'
+  console.log('SchedulePage render start')
+  const scheduleId = '20250624'
+  console.log('SCHED SCHED  called', scheduleId)
   const [all, setAll] = useState([])
   const [filtered, setFiltered] = useState([])
   const [excl, setExcl] = useState([])
@@ -26,18 +28,23 @@ export default function SchedulePage() {
   const [pinLoadingStates, setPinLoadingStates] = useState({})
 
   // Memoized callbacks to prevent unnecessary re-renders
-  const handleDownload = useCallback((basename) => {
-    downloadSchedule(basename)
+  const handleDownload = useCallback((schedule) => {
+    console.log('handleDownload called', schedule.basename)
+    downloadSchedule(schedule.basename)
   }, [])
 
   const handlePin = useCallback(async (schedule) => {
     const scheduleId = schedule.id || schedule.name || schedule.basename
+    console.log('handlePin called', scheduleId)
 
     // Set loading state for this specific schedule
     setPinLoadingStates(prev => ({ ...prev, [scheduleId]: true }))
 
     try {
       await togglePin(schedule)
+      console.log('togglePin finished', scheduleId)
+    } catch (error) {
+      console.error('Error toggling pin:', error)
     } finally {
       setPinLoadingStates(prev => ({ ...prev, [scheduleId]: false }))
     }
@@ -45,16 +52,21 @@ export default function SchedulePage() {
 
   // Initial data fetch
   useEffect(() => {
+    console.log('useEffect: fetchSchedules')
     fetchSchedules(scheduleId)
       .then(data => {
+        console.log('fetchSchedules resolved', data)
         setAll(data)
         setFiltered(data)
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error('fetchSchedules error', err)
+      })
   }, [scheduleId])
 
   // Memoized filtering logic
   const filteredSchedules = useMemo(() => {
+    console.log('filteredSchedules useMemo called', { all, thresh, excl })
     if (!all.length) return []
 
     const result = all.filter((schedule) => {
@@ -62,6 +74,7 @@ export default function SchedulePage() {
       const activeSlots = Object.values(schedule.columns).reduce((sum, value) => sum + (value === 1 ? 1 : 0), 0)
 
       if (activeSlots < 18) {
+        console.log('filtered out by activeSlots', schedule)
         return false
       }
 
@@ -80,6 +93,7 @@ export default function SchedulePage() {
         })
 
         if (excludedSlotsInSchedule.length > 0) {
+          console.log('filtered out by slot exclusion', schedule)
           return false
         }
       }
@@ -88,6 +102,7 @@ export default function SchedulePage() {
       for (const [key, threshold] of Object.entries(thresh)) {
         const value = schedule.metrics?.[key] ?? schedule.params?.[key]
         if (value !== undefined && Number(value) > threshold) {
+          console.log('filtered out by threshold', { schedule, key, value, threshold })
           return false
         }
       }
@@ -95,24 +110,26 @@ export default function SchedulePage() {
       return true
     })
 
+    console.log('filteredSchedules result', result)
     return result
   }, [all, thresh, excl])
 
   // Update filtered state when memoized result changes
   useEffect(() => {
+    console.log('useEffect: setFiltered', filteredSchedules)
     setFiltered(filteredSchedules)
   }, [filteredSchedules])
 
   // Memoized schedule cards to prevent unnecessary re-renders
   const scheduleCards = useMemo(() => {
+    console.log('scheduleCards useMemo called', filtered)
     return filtered.map(schedule => {
       const scheduleId = schedule.id || schedule.name || schedule.basename
       return (
         <ScheduleCard
           key={schedule.basename}
           schedule={schedule}
-          basename={schedule.basename}
-          onDownload={handleDownload}
+          onDownload={() => handleDownload(schedule)}
           onPin={handlePin}
           isPinned={isPinned(schedule)}
           pinLoading={pinLoadingStates[scheduleId] || false}
@@ -123,11 +140,13 @@ export default function SchedulePage() {
 
   // Memoized values to prevent recalculation
   const numSlots = useMemo(() => {
-    return all[0] ? Object.keys(all[0].columns).length : 24
+    const n = all[0] ? Object.keys(all[0].columns).length : 24
+    console.log('numSlots useMemo', n)
+    return n
   }, [all])
 
   const pinnedSchedulesInfo = useMemo(() => {
-    if (pinnedSchedules.length === 0) return null
+    if (!pinnedSchedules || pinnedSchedules.length === 0) return null
 
     return (
       <div style={{
@@ -141,7 +160,27 @@ export default function SchedulePage() {
         📌 {pinnedSchedules.length} schedule{pinnedSchedules.length !== 1 ? 's' : ''} pinned
       </div>
     )
-  }, [pinnedSchedules.length])
+  }, [pinnedSchedules?.length])
+
+  // Display pin error if there is one
+  const pinErrorDisplay = useMemo(() => {
+    if (!pinError) return null
+
+    return (
+      <div style={{
+        marginTop: '1rem',
+        padding: '8px 12px',
+        background: '#ffebee',
+        borderRadius: 4,
+        fontSize: '0.9em',
+        color: '#c62828'
+      }}>
+        ⚠️ Pin error: {pinError}
+      </div>
+    )
+  }, [pinError])
+
+  console.log('SchedulePage render end')
 
   return (
     <div style={{ display: 'flex', padding: 16 }}>
@@ -157,6 +196,7 @@ export default function SchedulePage() {
         </div>
 
         {pinnedSchedulesInfo}
+        {pinErrorDisplay}
       </div>
 
       <div style={{ flex: 1 }}>

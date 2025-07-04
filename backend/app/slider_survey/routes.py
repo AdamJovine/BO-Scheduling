@@ -1,343 +1,457 @@
-
 from flask import Blueprint, jsonify, request
-from .models import SliderConfig, SliderRecording
-from ..extensions import db
 from sqlalchemy import text
 import uuid
+import json
+import logging
 from datetime import datetime
-
 from flask_cors import cross_origin
+from ..connection import DatabaseConnection
 
-survey_bp = Blueprint('survey', __name__)
-
-# Add these routes to your survey/routes.py file
-
-@survey_bp.route('/init-tables', methods=['POST'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
-def init_tables():
-    """Initialize database tables for slider functionality"""
-    try:
-        print("🏗️ Creating database tables...")
-        
-        # Create all tables defined in models
-        db.create_all()
-        
-        print("✅ Tables created successfully")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Database tables initialized successfully',
-            'timestamp': datetime.utcnow().isoformat()
-        }), 201
-        
-    except Exception as e:
-        print(f"❌ Error creating tables: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'message': 'Failed to initialize database tables'
-        }), 500
-
-@survey_bp.route('/debug/check-tables', methods=['GET'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
-def debug_check_tables():
-    """Check if required tables exist"""
-    try:
-        # Import here to avoid circular imports
-        from sqlalchemy import text
-        
-        with db.engine.begin() as conn:
-            # Get all table names
-            result = conn.execute(text("""
-                SELECT name FROM sqlite_master 
-                WHERE type='table'
-                ORDER BY name
-            """))
-            tables = [row[0] for row in result.fetchall()]
-        
-        return jsonify({
-            'success': True,
-            'all_tables': tables,
-            'slider_configs_exists': 'slider_configs' in tables,
-            'slider_recordings_exists': 'slider_recordings' in tables,
-            'timestamp': datetime.utcnow().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+logger = logging.getLogger(__name__)
+survey_bp = Blueprint("survey", __name__)
 
 
-# Existing slider config routes
-@survey_bp.route('/slider-configs', methods=['GET'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
+# Slider config routes
+@survey_bp.route("/slider-configs", methods=["GET"])
+@cross_origin()
 def list_configs():
     """Get all saved configurations"""
     try:
-        configs = SliderConfig.query.order_by(SliderConfig.timestamp.desc()).all()
-        return jsonify({'configs': [c.to_dict() for c in configs]})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.info("📋 Listing slider configurations...")
 
-@survey_bp.route('/slider-configs', methods=['POST'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
-def create_config():
-    """Save a new configuration"""
+        configs = DatabaseConnection.execute_query(
+            """
+            SELECT id, name, description, thresholds, timestamp 
+            FROM slider_configs 
+            ORDER BY timestamp DESC
+            """
+        )
+
+        logger.info(f"📊 Found {len(configs)} slider configurations")
+
+        config_list = []
+        for i, config in enumerate(configs):
+            try:
+                config_dict = {
+                    "id": config.id,
+                    "name": config.name,
+                    "description": config.description,
+                    "thresholds": (
+                        json.loads(config.thresholds) if config.thresholds else {}
+                    ),
+                    "created": config.timestamp,
+                }
+                config_list.append(config_dict)
+                logger.debug(f"📝 Config {i+1}: {config.name}")
+            except Exception as e:
+                logger.warning(f"⚠️ Error processing config {i+1}: {e}")
+
+        logger.info(f"✅ Successfully processed {len(config_list)} configurations")
+        return jsonify({"configs": config_list})
+
+    except Exception as e:
+        logger.error(f"❌ Error listing configs: {e}")
+        return jsonify({"error": str(e), "configs": []}), 500
+
+
+@survey_bp.route("/slider-configs", methods=["POST"])
+@cross_origin()
+def save_config():
+    """Save a new slider configuration"""
     try:
         data = request.get_json()
-        
-        # Validate required fields
-        if not data.get('name') or not data.get('thresholds'):
-            return jsonify({'message': 'Name and thresholds are required'}), 400
-        
-        # Check if name already exists
-        existing = SliderConfig.query.filter_by(name=data['name']).first()
-        if existing:
-            return jsonify({'message': 'Configuration name already exists'}), 409
-        
-        config = SliderConfig(
-            name=data['name'],
-            description=data.get('description', ''),
-            thresholds=data['thresholds']
+        name = data.get("name")
+        thresholds = data.get("thresholds", {})
+        description = data.get("description", "")
+
+        if not name or not thresholds:
+            logger.warning("⚠️ Missing required fields: name and thresholds")
+            return jsonify({"error": "Name and thresholds are required"}), 400
+
+        config_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+
+        logger.info(f"💾 Saving slider configuration: {name}")
+
+        DatabaseConnection.execute_query(
+            """
+            INSERT INTO slider_configs (id, name, description, thresholds, created)
+            VALUES (:id, :name, :description, :thresholds, :created)
+        """,
+            {
+                "id": config_id,
+                "name": name,
+                "description": description,
+                "thresholds": json.dumps(thresholds),
+                "created": timestamp,
+            },
         )
-        
-        db.session.add(config)
-        db.session.commit()
-        
-        return jsonify(config.to_dict()), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
 
-@survey_bp.route('/slider-configs/<int:id>', methods=['PUT', 'DELETE'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
-def modify_config(id):
-    """Update or delete a configuration"""
+        logger.info(f"✅ Successfully saved configuration: {name} (ID: {config_id})")
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Configuration saved successfully",
+                "config_id": config_id,
+                "name": name,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Error saving config: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# Slider recording routes
+@survey_bp.route("/slider-recordings", methods=["GET"])
+@cross_origin()
+def get_slider_recordings():
+    """Get all slider recordings with optional filtering"""
     try:
-        config = SliderConfig.query.get_or_404(id)
-        
-        if request.method == 'PUT':
-            data = request.get_json()
-            if 'name' in data:
-                config.name = data['name']
-            if 'description' in data:
-                config.description = data['description']
-            if 'thresholds' in data:
-                config.thresholds = data['thresholds']
-            
-            db.session.commit()
-            return jsonify(config.to_dict())
-        
-        else:  # DELETE
-            db.session.delete(config)
-            db.session.commit()
-            return '', 204
-            
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        session_id = request.args.get("session_id")
+        slider_key = request.args.get("slider_key")
+        limit = request.args.get("limit", type=int)
 
-# New routes for recording slider interactions
-@survey_bp.route('/slider-recordings', methods=['POST'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
+        logger.info(
+            f"📊 Getting slider recordings (session_id={session_id}, slider_key={slider_key}, limit={limit})"
+        )
+
+        # Build query with filters
+        query = """
+            SELECT id, session_id, slider_key, value, min_value, max_value, created
+            FROM slider_recordings
+        """
+
+        conditions = []
+        params = {}
+
+        if session_id:
+            conditions.append("session_id = :session_id")
+            params["session_id"] = session_id
+            logger.info(f"🔍 Filtering by session_id: {session_id}")
+
+        if slider_key:
+            conditions.append("slider_key = :slider_key")
+            params["slider_key"] = slider_key
+            logger.info(f"🔍 Filtering by slider_key: {slider_key}")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY created DESC"
+
+        if limit:
+            query += " LIMIT :limit"
+            params["limit"] = limit
+            logger.info(f"🔍 Limiting results to: {limit}")
+
+        logger.info(f"🔍 Executing query: {query}")
+        recordings = DatabaseConnection.execute_query(query, params)
+        logger.info(f"📊 Query returned {len(recordings)} recordings")
+
+        recording_list = []
+        for i, recording in enumerate(recordings):
+            try:
+                recording_dict = {
+                    "id": recording.id,
+                    "session_id": recording.session_id,
+                    "slider_key": recording.slider_key,
+                    "value": recording.value,
+                    "min_value": recording.min_value,
+                    "max_value": recording.max_value,
+                    "created": recording.timestamp,
+                }
+                recording_list.append(recording_dict)
+                if i < 3:  # Log first 3
+                    logger.debug(
+                        f"📝 Recording {i+1}: {recording.slider_key}={recording.value}"
+                    )
+            except Exception as e:
+                logger.warning(f"⚠️ Error processing recording {i+1}: {e}")
+
+        logger.info(f"✅ Successfully processed {len(recording_list)} recordings")
+        return jsonify({"recordings": recording_list, "total": len(recording_list)})
+
+    except Exception as e:
+        logger.error(f"❌ Error getting slider recordings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@survey_bp.route("/slider-recordings", methods=["POST"])
+@cross_origin()
 def record_slider_interaction():
     """Record a single slider interaction"""
     try:
         data = request.get_json()
-        
-        if not data:
-            return jsonify({'message': 'No JSON data provided'}), 400
-        
-        # Validate required fields
-        required_fields = ['slider_key', 'value', 'min_value', 'max_value']
-        missing_fields = [field for field in required_fields if field not in data]
-        
-        if missing_fields:
-            return jsonify({'message': f'Missing required fields: {missing_fields}'}), 400
-        
-        recording = SliderRecording(
-            session_id=data.get('session_id'),
-            slider_key=data['slider_key'],
-            value=float(data['value']),
-            min_value=float(data['min_value']),
-            max_value=float(data['max_value'])
-        )
-        
-        db.session.add(recording)
-        db.session.commit()
-        
-        return jsonify(recording.to_dict()), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'message': 'Error saving recording', 'error': str(e)}), 500
+        session_id = data.get("session_id")
+        slider_key = data.get("slider_key")
+        value = data.get("value")
+        min_value = data.get("min_value")
+        max_value = data.get("max_value")
 
-@survey_bp.route('/slider-recordings/batch', methods=['POST'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
+        if not all([session_id, slider_key, value is not None]):
+            logger.warning("⚠️ Missing required fields for slider recording")
+            return (
+                jsonify({"error": "session_id, slider_key, and value are required"}),
+                400,
+            )
+
+        recording_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+
+        logger.info(
+            f"📊 Recording slider interaction: {slider_key}={value} (session: {session_id})"
+        )
+
+        DatabaseConnection.execute_query(
+            """
+            INSERT INTO slider_recordings (id, session_id, slider_key, value, min_value, max_value, created)
+            VALUES (:id, :session_id, :slider_key, :value, :min_value, :max_value, :created)
+        """,
+            {
+                "id": recording_id,
+                "session_id": session_id,
+                "slider_key": slider_key,
+                "value": value,
+                "min_value": min_value,
+                "max_value": max_value,
+                "created": timestamp,
+            },
+        )
+
+        logger.info(f"✅ Successfully recorded slider interaction (ID: {recording_id})")
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Slider interaction recorded successfully",
+                "recording_id": recording_id,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Error recording slider interaction: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@survey_bp.route("/slider-recordings/batch", methods=["POST"])
+@cross_origin()
 def record_slider_batch():
-    """Record multiple slider positions at once"""
-    print("RECORD SLIDERER ER ")
-    
+    """Record multiple slider interactions in a batch"""
     try:
         data = request.get_json()
-        
-        if not data or not data.get('recordings'):
-            return jsonify({'message': 'recordings array is required'}), 400
-        
-        session_id = data.get('session_id') or str(uuid.uuid4())
-        recordings_data = data.get('recordings', [])
-        print('recordings_data. , ' , recordings_data )
-        recordings = []
-        for item in recordings_data:
-            print("ITEM " , item)
-            # Validate required fields for each recording
-            required_fields = ['slider_key', 'value', 'min_value', 'max_value']
-            if not all(field in item for field in required_fields):
-                continue
-                
-            recording = SliderRecording(
-                session_id=session_id,
-                slider_key=item['slider_key'],
-                value=float(item['value']),
-                min_value=float(item['min_value']),
-                max_value=float(item['max_value'])
+        session_id = data.get("session_id")
+        recordings = data.get("recordings", [])
+
+        if not session_id or not recordings:
+            logger.warning("⚠️ Missing required fields for batch recording")
+            return jsonify({"error": "session_id and recordings are required"}), 400
+
+        logger.info(
+            f"📊 Recording batch of {len(recordings)} slider interactions (session: {session_id})"
+        )
+
+        recording_ids = []
+        timestamp = datetime.utcnow().isoformat()
+
+        for recording in recordings:
+            recording_id = str(uuid.uuid4())
+            recording_ids.append(recording_id)
+            DatabaseConnection.execute_query(
+                """
+                INSERT INTO slider_recordings (session_id, slider_key, value, min_value, max_value, created)
+                VALUES (:session_id, :slider_key, :value, :min_value, :max_value, :created)
+            """,
+                {
+                    # Remove "id": recording_id,
+                    "session_id": session_id,
+                    "slider_key": recording.get("slider_key"),
+                    "value": recording.get("value"),
+                    "min_value": recording.get("min_value"),
+                    "max_value": recording.get("max_value"),
+                    "created": timestamp,
+                },
             )
-            recordings.append(recording)
-        
-        if recordings:
-            db.session.add_all(recordings)
-            db.session.commit()
-        
-        return jsonify({
-            'message': f'Recorded {len(recordings)} slider interactions',
-            'session_id': session_id,
-            'recordings': [r.to_dict() for r in recordings]
-        }), 201
-            
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'message': 'Error saving batch recordings',
-            'error': str(e)
-        }), 500
 
-@survey_bp.route('/slider-recordings', methods=['GET'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
-def get_slider_recordings():
-    """Get all slider recordings with optional filtering"""
-    try:
-        session_id = request.args.get('session_id')
-        slider_key = request.args.get('slider_key')
-        limit = request.args.get('limit', type=int)
-        
-        query = SliderRecording.query
-        
-        if session_id:
-            query = query.filter_by(session_id=session_id)
-        if slider_key:
-            query = query.filter_by(slider_key=slider_key)
-        
-        query = query.order_by(SliderRecording.timestamp.desc())
-        
-        if limit:
-            query = query.limit(limit)
-        
-        recordings = query.all()
-        
-        return jsonify({
-            'recordings': [r.to_dict() for r in recordings],
-            'total': len(recordings)
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.info(
+            f"✅ Successfully recorded {len(recording_ids)} slider interactions"
+        )
 
-@survey_bp.route('/slider-recordings/sessions', methods=['GET'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Recorded {len(recording_ids)} slider interactions",
+                "recording_ids": recording_ids,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Error recording slider batch: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@survey_bp.route("/slider-recordings/sessions", methods=["GET"])
+@cross_origin()
 def get_recording_sessions():
     """Get all unique session IDs with recording counts"""
     try:
-        from sqlalchemy import func
-        
-        sessions = db.session.query(
-            SliderRecording.session_id,
-            func.count(SliderRecording.id).label('recording_count'),
-            func.min(SliderRecording.timestamp).label('first_recording'),
-            func.max(SliderRecording.timestamp).label('last_recording')
-        ).group_by(SliderRecording.session_id).all()
-        
-        return jsonify({
-            'sessions': [{
-                'session_id': s.session_id,
-                'recording_count': s.recording_count,
-                'first_recording': s.first_recording.isoformat() if s.first_recording else None,
-                'last_recording': s.last_recording.isoformat() if s.last_recording else None
-            } for s in sessions]
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.info("📊 Getting recording sessions summary...")
 
-# Debug endpoints for testing
-@survey_bp.route('/debug/test', methods=['GET'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
+        sessions = DatabaseConnection.execute_query(
+            """
+            SELECT 
+                session_id,
+                COUNT(id) as recording_count,
+                MIN(created) as first_recording,
+                MAX(created) as last_recording
+            FROM slider_recordings
+            WHERE session_id IS NOT NULL
+            GROUP BY session_id
+            ORDER BY MAX(created) DESC
+        """
+        )
+
+        logger.info(f"📊 Found {len(sessions)} unique sessions")
+
+        session_list = []
+        for i, session in enumerate(sessions):
+            try:
+                session_dict = {
+                    "session_id": session.session_id,
+                    "recording_count": session.recording_count,
+                    "first_recording": session.first_recording,
+                    "last_recording": session.last_recording,
+                }
+                session_list.append(session_dict)
+                logger.debug(
+                    f"📝 Session {i+1}: {session.session_id} ({session.recording_count} recordings)"
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ Error processing session {i+1}: {e}")
+
+        logger.info(f"✅ Successfully processed {len(session_list)} sessions")
+        return jsonify({"sessions": session_list})
+
+    except Exception as e:
+        logger.error(f"❌ Error getting recording sessions: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# Debug endpoints
+@survey_bp.route("/debug/test", methods=["GET"])
+@cross_origin()
 def debug_test():
     """Test endpoint to verify API is working"""
-    return jsonify({
-        'message': 'Survey blueprint is working!',
-        'timestamp': datetime.utcnow().isoformat(),
-        'blueprint_name': 'survey'
-    })
+    logger.info("🧪 Debug test endpoint called")
+    return jsonify(
+        {
+            "message": "Survey blueprint is working!",
+            "created": datetime.utcnow().isoformat(),
+            "blueprint_name": "survey",
+            "status": "healthy",
+        }
+    )
 
-@survey_bp.route('/debug/db-test', methods=['GET'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
-def debug_db_test():
-    """Test database connection"""
-    try:
-        # Test database connection
-        recording_count = SliderRecording.query.count()
-        config_count = SliderConfig.query.count()
-        
-        # Test if we can create a simple record
-        test_record = SliderRecording(
-            session_id='debug-test',
-            slider_key='test_key',
-            value=0.5,
-            min_value=0.0,
-            max_value=1.0
-        )
-        
-        db.session.add(test_record)
-        db.session.commit()
-        
-        return jsonify({
-            'status': 'success',
-            'recording_count': recording_count + 1,
-            'config_count': config_count,
-            'test_record_id': test_record.id,
-            'message': 'Database is working correctly'
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'message': 'Database connection failed'
-        }), 500
 
-@survey_bp.route('/debug/all-recordings', methods=['GET'])
-@cross_origin(origins=['http://localhost:5173', 'http://127.0.0.1:5173'])
+@survey_bp.route("/debug/all-recordings", methods=["GET"])
+@cross_origin()
 def debug_all_recordings():
     """Show all recordings in the database"""
     try:
-        recordings = SliderRecording.query.order_by(SliderRecording.timestamp.desc()).all()
-        return jsonify({
-            'total_recordings': len(recordings),
-            'recordings': [r.to_dict() for r in recordings]
-        })
+        logger.info("📊 Getting all recordings for debug...")
+
+        recordings = DatabaseConnection.execute_query(
+            """
+            SELECT id, session_id, slider_key, value, min_value, max_value, created
+            FROM slider_recordings 
+            ORDER BY created DESC
+        """
+        )
+
+        logger.info(f"📊 Found {len(recordings)} total recordings")
+
+        recording_list = []
+        for i, recording in enumerate(recordings):
+            try:
+                recording_dict = {
+                    "id": recording.id,
+                    "session_id": recording.session_id,
+                    "slider_key": recording.slider_key,
+                    "value": recording.value,
+                    "min_value": recording.min_value,
+                    "max_value": recording.max_value,
+                    "created": recording.timestamp,
+                }
+                recording_list.append(recording_dict)
+                if i < 5:  # Log first 5
+                    logger.debug(
+                        f"📝 Recording {i+1}: {recording.slider_key}={recording.value}"
+                    )
+            except Exception as e:
+                logger.warning(f"⚠️ Error processing recording {i+1}: {e}")
+
+        logger.info(f"✅ Successfully processed {len(recording_list)} recordings")
+
+        return jsonify(
+            {
+                "total_recordings": len(recording_list),
+                "recordings": recording_list,
+            }
+        )
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"❌ Error getting all recordings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# Health check endpoint
+@survey_bp.route("/slider-recordings/health", methods=["GET"])
+@cross_origin()
+def health_check():
+    """Health check for survey service"""
+    try:
+        logger.info("🏥 Running health check...")
+
+        db_healthy = DatabaseConnection.check_connection()
+        logger.info(f"📊 Database connection: {'✅ OK' if db_healthy else '❌ FAILED'}")
+
+        # Overall status
+        status = "healthy" if db_healthy else "unhealthy"
+
+        # Get table counts
+        table_counts = {}
+        for table_name in ["slider_configs", "slider_recordings", "metrics"]:
+            try:
+                count_result = DatabaseConnection.execute_query(
+                    f"SELECT COUNT(*) as count FROM {table_name}", fetch_all=False
+                )
+                table_counts[table_name] = count_result.count if count_result else 0
+                logger.info(f"📊 {table_name}: {table_counts[table_name]} rows")
+            except Exception as e:
+                table_counts[table_name] = f"error: {str(e)}"
+                logger.warning(f"⚠️ Error checking {table_name}: {e}")
+
+        logger.info(f"✅ Health check completed - Status: {status}")
+
+        return jsonify(
+            {
+                "status": status,
+                "database": "connected" if db_healthy else "disconnected",
+                "table_counts": table_counts,
+                "created": datetime.utcnow().isoformat(),
+            }
+        ), (200 if status == "healthy" else 503)
+
+    except Exception as e:
+        logger.error(f"❌ Health check failed: {e}")
+        return (
+            jsonify(
+                {
+                    "status": "unhealthy",
+                    "error": str(e),
+                    "created": datetime.utcnow().isoformat(),
+                }
+            ),
+            503,
+        )

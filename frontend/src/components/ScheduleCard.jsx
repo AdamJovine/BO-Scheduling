@@ -1,3 +1,4 @@
+import { API_BASE } from '../api'
 export default function ScheduleCard({
   schedule: s,
   onDownload,
@@ -7,35 +8,27 @@ export default function ScheduleCard({
 }) {
   const title = s.display_name || s.name
 
-  // src/config.js
-  const API_URL = import.meta.env.VITE_API_URL;
-  const IMG_BASE = `${API_URL}/api/images`;
+  // Try different image base paths
+
+  const imgBase = `${API_BASE}/images`
 
   // Debug logging
   //console.log('Schedule basename:', s.basename)
   //console.log('Schedule image URL:', `${imgBase}/${s.basename}.png`)
   //console.log('Distribution image URL:', `${imgBase}/${s.basename}_dist.png`)
+
   const handleImageLoad = (imageType) => {
     console.log(`✅ Successfully loaded ${imageType} image`)
-    // Reset opacity in case it was set by error handler
-    // Note: We don't have direct access to the event target here,
-    // but we could pass it if needed
   }
+
   const handleImageError = (e, imageType) => {
     console.error(`❌ Failed to load ${imageType} image:`, e.target.src)
     e.target.style.opacity = 0.4
 
-    // Try alternative path
-    if (e.target.src.includes('/api/images/')) {
-      console.log('🔄 Trying without /api prefix...')
-      e.target.src = e.target.src.replace('/api/images/', '/images/')
-    } else if (e.target.src.includes('/images/')) {
-      console.log('🔄 Trying with /api prefix...')
-      e.target.src = e.target.src.replace('/images/', '/api/images/')
-    }
+    // Set a static fallback image to avoid infinite loading loops
+    e.target.onerror = null // Prevent further error handling
+    e.target.src = '/fallback-image.png' // Make sure this image exists in your public folder
   }
-
-
 
   return (
     <div style={{
@@ -63,20 +56,22 @@ export default function ScheduleCard({
               padding: '6px 12px',
               borderRadius: 4,
               cursor: pinLoading ? 'not-allowed' : 'pointer',
-              opacity: pinLoading ? 0.6 : 1
+              opacity: pinLoading ? 0.6 : 1,
+              transition: 'all 0.2s ease'
             }}
           >
             {pinLoading ? '⏳' : (isPinned ? '📌 Pinned' : '📌 Pin')}
           </button>
           <button
-            onClick={onDownload}
+            onClick={() => onDownload(s)}
             style={{
               background: '#28a745',
               color: 'white',
               border: '1px solid #28a745',
               padding: '6px 12px',
               borderRadius: 4,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
             }}
           >
             Download CSV
@@ -91,7 +86,7 @@ export default function ScheduleCard({
           borderRadius: 4,
           flex: '1 1 30%',
           overflowY: 'visible',
-          maxHeight: 'none'  // Add max height to prevent cards from getting too tall
+          maxHeight: 'none'
         }}>
           <div style={{
             fontSize: '14px',
