@@ -82,7 +82,7 @@ class DatabaseConnection:
 
     @classmethod
     def execute_query(cls, query, params=None, fetch_all=True):
-        """Execute a SELECT query safely and return results"""
+        """Execute a query safely and return results for SELECT queries"""
         try:
             engine = cls.get_engine()
             with engine.connect() as conn:
@@ -91,10 +91,18 @@ class DatabaseConnection:
                 else:
                     result = conn.execute(text(query))
 
-                if fetch_all:
-                    return result.fetchall()
+                # Check if this is a SELECT query that returns rows
+                if query.strip().upper().startswith("SELECT"):
+                    # For SELECT queries, fetch and return results
+                    if fetch_all:
+                        return result.fetchall()
+                    else:
+                        return result.fetchone()
                 else:
-                    return result.fetchone()
+                    # For INSERT, UPDATE, DELETE queries, just commit and return None
+                    conn.commit()
+                    return None
+
         except Exception as e:
             print(f"❌ Query failed: {e}")
             print(f"   Query: {query}")

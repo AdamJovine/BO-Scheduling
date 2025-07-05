@@ -1,0 +1,6 @@
+conflicts,quints,quads,four in five slots,triple in 24h (no gaps),triple in same day (no gaps),three in four slots,evening/morning b2b,other b2b,two in three slots,singular late exam,"two exams, large gap",avg_max,lateness,size_cutoff,reserved,num_blocks,alpha,gamma,schedule_name
+1,0,0,0,2,0,4,47,67,204,869,74,12.6,31220,1.0,1.0,1.0,1.0,1.0,SELECTED
+0,0,0,0,0,0,1,0,25,103,545,126,12.488172043010753,35830,1.0,1.0,1.0,1.0,1.0,pp21cakelarge300cutoff20trip16btb1 (1)
+1,0,0,0,0,0,4,114,48,149,1105,100,14.933794162826421,35348,1.0,1.0,1.0,1.0,1.0,pp22cakelarge300cutoff19trip16btb1
+1,0,0,0,2,0,4,37,83,89,1117,201,13.005069124423963,29033,1.0,1.0,1.0,1.0,1.0,pp22cakelarge300cutoff18trip16btb1
+0,0,0,0,0,0,4,4,22,122,509,119,12.422887864823348,23572,1.0,1.0,1.0,1.0,1.0,pp21cakelarge300cutoff19trip16btb1 (1)

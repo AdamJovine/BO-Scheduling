@@ -175,11 +175,6 @@ class SliderRecording(db.Model):
     max_value = db.Column(db.Float)
     created = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Constraints
-    __table_args__ = (
-        UniqueConstraint("session_id", "slider_key", name="unique_session_slider"),
-    )
-
     def __repr__(self):
         return f"<SliderRecording {self.session_id}-{self.slider_key}>"
 

@@ -3,7 +3,8 @@
 from flask import Flask
 from .extensions import db
 from pathlib import Path
-
+from sqlalchemy import text
+from .connection import DatabaseConnection
 from flask_cors import CORS
 
 
@@ -32,7 +33,8 @@ def create_app():
 
     # Create tables if they don't exist
     with app.app_context():
-        # db.create_all()
+        # DatabaseConnection.execute_query("DROP TABLE IF EXISTS slider_recordings")
+        db.create_all()
         print("✅ Database ready")
 
         # Check what tables exist
@@ -44,10 +46,12 @@ def create_app():
     from .helpers.routes import helpers_bp
     from .slider_survey.routes import survey_bp
     from .pinned.routes import pinned_bp
+    from .upload.routes import upload_bp
 
     app.register_blueprint(helpers_bp, url_prefix="/api")
     app.register_blueprint(survey_bp, url_prefix="/api")
     app.register_blueprint(pinned_bp, url_prefix="/api")
+    app.register_blueprint(upload_bp, url_prefix="/api")
 
     return app
 

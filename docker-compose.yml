@@ -1,0 +1,49 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:8000:8000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=8000
+      - SECRET_KEY=your-production-secret-key-here-change-this
+      - NUM_SLOTS=24
+      - UPLOAD_API_KEY=test-api-key-123
+    volumes:
+      - ./backend/app/static:/app/backend/app/static
+      - /tmp/boscheduling_logs:/app/app/logs
+      - ./backend/app/schedules.db:/app/schedules.db
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s # Give gunicorn more time to start
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s # Give nginx time to start
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

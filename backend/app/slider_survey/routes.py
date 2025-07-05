@@ -197,20 +197,22 @@ def record_slider_interaction():
                 400,
             )
 
-        recording_id = str(uuid.uuid4())
+        # Remove this line since we're letting SQLite auto-generate the ID
+        # recording_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
 
         logger.info(
             f"📊 Recording slider interaction: {slider_key}={value} (session: {session_id})"
         )
 
+        # Remove 'id' from the INSERT statement - let SQLite auto-generate it
+        # Don't assign result for INSERT operations
         DatabaseConnection.execute_query(
             """
-            INSERT INTO slider_recordings (id, session_id, slider_key, value, min_value, max_value, created)
-            VALUES (:id, :session_id, :slider_key, :value, :min_value, :max_value, :created)
+            INSERT INTO slider_recordings (session_id, slider_key, value, min_value, max_value, created)
+            VALUES (:session_id, :slider_key, :value, :min_value, :max_value, :created)
         """,
             {
-                "id": recording_id,
                 "session_id": session_id,
                 "slider_key": slider_key,
                 "value": value,
@@ -220,13 +222,15 @@ def record_slider_interaction():
             },
         )
 
-        logger.info(f"✅ Successfully recorded slider interaction (ID: {recording_id})")
+        # Get the auto-generated ID if you need it for the response
+        # (This depends on how your DatabaseConnection.execute_query works)
+        logger.info(f"✅ Successfully recorded slider interaction")
 
         return jsonify(
             {
                 "success": True,
                 "message": "Slider interaction recorded successfully",
-                "recording_id": recording_id,
+                # "recording_id": recording_id,  # Remove this or use the auto-generated ID
             }
         )
 
